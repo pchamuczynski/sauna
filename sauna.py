@@ -9,19 +9,68 @@ import time
 
 from PySimpleGUI.PySimpleGUI import VStretch
 
+# BACKGROUND_COLOR='black'
+DEGREE_SIGN = u'\N{DEGREE SIGN}'
+
+class TempControl(sg.Column):
+    def __init__(self):
+        self.button_color = sg.theme_background_color()
+        self.on_off_button = sg.Button(
+            image_filename='resources/on_off_black_40x40.png',
+            border_width=0,
+            button_color=self.button_color)
+        self.timer_button = sg.Button(
+            image_filename='resources/clock_40x40.png',
+            border_width=0,
+            button_color=self.button_color
+        )
+
+        self.layout=[
+            [self.on_off_button, self.timer_button]
+        ]
+        sg.Column.__init__(self,self.layout)
+
+class SetupTempColumn(sg.Column):    
+    def __init__(self, image, default_temp=20):
+        self.button_color=sg.theme_background_color()
+        self.current_temp_setting = default_temp
+        self.image = image
+        self.up_button = sg.Button(image_filename='resources/triangle_up_60x60.png',
+                                   border_width=0,button_color=self.button_color)
+        self.temp_display = sg.Text(str(self.getCurrentTemp()) + DEGREE_SIGN, font='Comic 30')
+        self.down_button = sg.Button(image_filename='resources/triangle_down_60x60.png',
+                                     border_width=0, button_color=self.button_color)
+        self.temp_control = TempControl()
+        
+
+        self.layout = [
+            [sg.Image(self.image)],
+            [sg.VStretch()],
+            [self.up_button],
+            [self.temp_display],
+            [self.down_button],
+            [self.temp_control],
+            [sg.VStretch()],
+        ]
+        sg.Column.__init__(self, self.layout, element_justification='c',expand_y=True)
+
+    def getCurrentTemp(self):
+        return self.current_temp_setting
+
 class SetupColumn(sg.Column):
     def __init__(self, width):
         self.width_fill = sg.Text(' '*width, font='Any 2', pad=(0, 0))
+        self.home_temp_column = SetupTempColumn('resources/home_60x60.png', default_temp=20)
+        self.sauna_temp_column = SetupTempColumn('resources/sauna_60x60.png',default_temp=80)
         self.layout = [
             [self.width_fill],
-            [sg.VStretch()],
-            [sg.Text("Dupa", expand_y=True)],
-            [sg.VStretch()]
+            [sg.Text('Ustawienia temperatury', font='Comic 16', justification='c')],
+            [sg.Stretch(),self.home_temp_column,sg.Stretch(),self.sauna_temp_column,sg.Stretch()],
         ]
         sg.Column.__init__(self, 
-                          self.layout, 
-                          expand_x=True, expand_y=True,
-                          element_justification='c')
+                           self.layout, 
+                           expand_x=True, expand_y=True,
+                           element_justification='c')
 class Clock(sg.Column):
     def __init__(self):
         self.date_text = sg.Text('', font='Comic 16')
@@ -38,8 +87,6 @@ class Clock(sg.Column):
         self.time_text.update(value=now.strftime('%H:%M:%S'))
 
 class Thermometer(sg.Column):
-    degree_sign = u'\N{DEGREE SIGN}'
-
     def __init__(self, image, temp_source):
         self.image = image
         self.temp_source = temp_source
@@ -51,10 +98,10 @@ class Thermometer(sg.Column):
         sg.Column.__init__(self,self.layout)
     
     def update(self):
-        self.temp_text.update(value=self.readTemperature())
+        self.temp_text.update(value=str(self.readTemperature()) + DEGREE_SIGN)
 
     def readTemperature(self):
-        return str(self.temp_source) + self.degree_sign
+        return str(self.temp_source)
 
 
 class StatusColumn(sg.Column):
@@ -88,17 +135,21 @@ class StatusColumn(sg.Column):
 
 
 class GUI:   
-
     def __init__(self):     
-        self.setup_column = SetupColumn(700)
-        self.status_column = StatusColumn(300)
+        self.setup_width = 500
+        self.status_width = 300
+        self.hight = 500
+
+        self.setup_column = SetupColumn(self.setup_width)
+        self.status_column = StatusColumn(self.status_width)
         self.layout = [[self.setup_column, sg.VSep(), self.status_column]]
 
         self.window = sg.Window('Window Title', self.layout, finalize=True,
-                                background_color='black', grab_anywhere=True,
+                                grab_anywhere=True,
                                 use_default_focus=False, no_titlebar=True,
-                                alpha_channel=.8, element_justification='c',
-                                size=(1000,700))
+                                # alpha_channel=.8, 
+                                element_justification='c',
+                                size=(self.setup_width+self.status_width,self.hight))
         self.status_column.expand(expand_x=True,expand_y=True)
         self.run = True
 
@@ -125,115 +176,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-###
-# # Create the Window
-
-# setup_layout = [
-#                     [sg.Text(' '*700, font='Any 2',pad=(0,0))],
-#                     [sg.Stretch(),sg.Text("Setup"), sg.Text('dupa'), sg.Stretch()]
-#                ]
-# status_layout = [
-#                     [sg.Text(' '*300, font='Any 2', pad=(0, 0))],
-#                     [sg.Stretch(), sg.Text("Status"), sg.Text('dupa'), sg.Stretch()]
-# ]
-
-# layout = [[sg.Column(layout=setup_layout, element_justification='c'), sg.Column(layout=status_layout, element_justification='c')]]
-
-# window = sg.Window('Window Title', layout, finalize=True,
-#                    background_color='black', grab_anywhere=True,
-#                    use_default_focus=False, no_titlebar=True,
-#                    alpha_channel=.8, element_justification='c')
-# # Event Loop to process "events" and get the "values" of the inputs
-# while True:
-#     event, values = window.read()
-#     if event == sg.WIN_CLOSED or event == 'Cancel':  # if user closes window or clicks cancel
-#         break
-#     break
-
-# window.close()
-
-###
-
-
-# sg.theme('DarkAmber')   # Add a touch of color
-# sg.set_options(border_width=1, text_color='white',
-#                background_color='blue', 
-#                text_element_background_color='brown')
-
-# now = datetime.now()
-
-# home_setup_column_layout = []
-
-# sauna_setup_column_layout = []
-
-# setup_frame_layout = [
-#     [sg.Stretch(), sg.Text(text='Zadana temperatura', expand_x=True, expand_y=True, justification='c'), sg.Stretch()],
-    
-# ]   
-
-# setup_frame = sg.Frame(title='', layout=setup_frame_layout, 
-#                          border_width=0,
-#                          element_justification='center', 
-#                          size=(0,600),
-#                          expand_x=True, expand_y=True, 
-#                          pad=(0, 0),
-#                          background_color='black')
-
-# setup_column = sg.Column(layout=[[setup_frame]],
-#                          size=(0, 600),
-#                          expand_x=True, expand_y=True,
-#                          pad=(0, 0),
-#                          background_color='green'
-#                          )
-
-# status_column_layout = [
-#     [sg.Text(text=now.strftime('%A %Y-%m-%d'), justification='c', expand_x=True, expand_y=False, font='Arial 24 bold')],
-#     [sg.Text(text=now.strftime('%H:%M:%S'), justification='c', expand_x=True, expand_y=False, font='Arial 30 bold')],
-#     [sg.Button('Cancel')]
-# ]
-# status_column = sg.Column(layout=status_column_layout, 
-#                           size=(324, 600), 
-#                         #   element_justification='right', 
-#                         #   expand_x=True, expand_y=True,
-#                           background_color='black',
-#                           visible=True)
-
-# # All the stuff inside your window.
-# layout = [
-#     [sg.Stretch(), setup_column, sg.Stretch(), status_column]
-# ]
-# # layout = [[setup_column, sg.VerticalSeparator(), status_column]]
-
-# # Create the Window
-# window = sg.Window('Window Title', layout, finalize=True,
-#                    background_color='black', grab_anywhere=True,
-#                    use_default_focus=False, no_titlebar=True,
-#                    alpha_channel=.8, element_justification='c')
-# # Event Loop to process "events" and get the "values" of the inputs
-# while True:
-#     event, values = window.read()
-#     if event == sg.WIN_CLOSED or event == 'Cancel':  # if user closes window or clicks cancel
-#         break
-#     break
-
-# window.close()
-
-
-# # # # All the stuff inside your window.
-# # # layout = [[sg.Text('Zadana temperatura'), sg.Text(date.today())],
-# # #           [sg.Text('Enter something on Row 2'), sg.InputText()],
-# # #           [sg.Button('Ok'), sg.Button('Cancel')]]
-
-# # # # Create the Window
-# # # window = sg.Window('Window Title', layout)
-# # # # Event Loop to process "events" and get the "values" of the inputs
-# # # while True:
-# # #     event, values = window.read()
-# # #     if event == sg.WIN_CLOSED or event == 'Cancel':  # if user closes window or clicks cancel
-# # #         break
-# # #     print('You entered ', values[0])
-
-# # # window.close()
-
-
