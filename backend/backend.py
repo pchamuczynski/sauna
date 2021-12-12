@@ -1,5 +1,5 @@
 import threading
-import random
+import inspect
 import time
 import python_weather
 import asyncio
@@ -30,10 +30,15 @@ class SaunaBackend:
 
         self.oven_control_thread = threading.Thread(target=self.__ovenControl)
         self.oven_control_thread.start()
-        
-        self.get_weather_thread = threading.Thread(target=self.__getWeather)
-        self.get_weather_thread.start()
 
+        self.event_loop = asyncio.new_event_loop()
+        self.background_thread = threading.Thread(target=self.startBackgroundLoop, args=(self.event_loop,), daemon=True)
+        self.background_thread.start()
+        
+        self.task = asyncio.run_coroutine_threadsafe(self.__getWeather(), self.event_loop)
+
+        # loop = asyncio.get_event_loop()
+        # loop.run_until_complete(self.__getWeather())
 
     def stop(self):
         self.run = False
@@ -90,11 +95,15 @@ class SaunaBackend:
             self.__switchHouseOven(False)
 
     async def __getWeather(self):
-        client = python_weather.Client(format=python_weather.METRIC)
-        while(self.run):
-            weather = await client.find("Washington DC")
-            print("Current weather in DC: " + str(weather.current.temperature))
-            
+        while self.run:            
+            client = python_weather.Client(format=python_weather.METRIC)
+            weather = await client.find("Biały Kościół, dolnośląskie, Pl")
+            print("Current weather in Biały Kościół: " + str(weather.current.temperature))
+            await client.close()
+            print(weather)
+            print(weather.current)
+            self.current_external_temp = int(weather.current.temperature)
+            time.sleep(1)
 
     def __ovenControl(self):
         while self.run:
@@ -138,9 +147,8 @@ class SaunaBackend:
                 elif self.current_sauna_temp > self.current_house_temp:
                     self.current_sauna_temp -= 1
                 elif self.current_sauna_temp < self.current_house_temp:
-                    self.current_sauna_temp += 1
-                    
-                self.current_external_temp = 20
+                    self.current_sauna_temp += 1                   
+                
             time.sleep(1)
 
     def __increment(self, var, max):
@@ -148,3 +156,7 @@ class SaunaBackend:
 
     def __decrement(self, var, min):
         return var if var == min else var - 1
+    
+    def startBackgroundLoop(self, loop: asyncio.AbstractEventLoop):
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
