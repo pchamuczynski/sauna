@@ -1,0 +1,89 @@
+import threading
+import random
+
+class SaunaBackend:
+    MAX_SAUNA_TEMP = 120
+    MIN_SAUNA_TEMP = 40
+    MAX_HOUSE_TEMP = 30
+    MIN_HOUSE_TEMP = 10
+
+    def __init__(self):
+        self.lock = threading.Lock()
+
+        self.sauna_temp_setting = 80
+        self.house_temp_setting = 22
+        self.current_house_temp = self.updateHouseTemp()
+        self.current_sauna_temp = self.updateSaunaTemp()
+        self.current_external_temp = self.updateExternalTemp()
+        self.sauna_heating_enabled = False
+        self.house_heating_enabled = False
+
+        self.temp_update_thread = threading.Thread(target=self.updateTemp)
+
+    def increment(self, var, max):
+        with self.lock:
+            return var if var == max else var + 1
+
+    def decrement(self, var, min):
+        with self.lock:
+            return var if var == min else var - 1
+
+    def increaseHouseTemp(self):
+        with self.lock:
+            self.house_temp = self.increment(self.house_temp, self.MAX_HOUSE_TEMP)
+
+    def decreaseHouseTemp(self):
+        with self.lock:
+            self.house_temp = self.decrement(self.house_temp, self.MIN_HOUSE_TEMP)
+
+    def increaseSaunaTemp(self):
+        with self.lock:
+            self.house_temp = self.increment(self.house_temp, self.MAX_HOUSE_TEMP)
+
+    def decreaseSaunaTemp(self):
+        with self.lock:
+            self.house_temp = self.decrement(self.house_temp, self.MIN_HOUSE_TEMP)
+
+    def currentHouseTemp(self):
+        with self.lock:
+            return self.current_house_temp
+
+    def currentSaunaTemp(self):
+        with self.lock:
+            return self.current_sauna_temp
+
+    def currentExternalTemp(self):
+        with self.lock:
+            return self.current_external_temp
+
+    def enableSaunaHeating(self):
+        with self.lock:
+            self.sauna_heating_enabled = True
+
+    def disableSaunaHeating(self):
+        with self.lock:
+            self.sauna_heating_enabled = False
+
+    def enableHouseHeating(self):
+        with self.lock:
+            self.house_heating_enabled = True
+
+    def disableHouseHeating(self):
+        with self.lock:
+            self.house_heating_enabled = False
+
+    def updateTemp(self):
+        with self.lock:
+            if self.house_heating_enabled:
+                if random.randint(self.MAX_HOUSE_TEMP) > self.current_house_temp:
+                    self.current_house_temp += 1
+            else:
+                if random.randint(self.current_house_temp) < self.MIN_HOUSE_TEMP:
+                    self.current_house_temp -= 1
+            if self.sauna_heating_enabled:
+                if random.randint(self.MAX_SAUNA_TEMP) > self.current_sauna_temp:
+                    self.current_house_temp += 1
+            else:
+                if random.randint(self.current_sauna_temp) < self.MIN_SAUNA_TEMP:
+                    self.current_sauna_temp -= 1
+            self.current_external_temp = 20
