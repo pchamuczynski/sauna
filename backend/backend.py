@@ -1,6 +1,8 @@
 import threading
 import random
 import time
+import python_weather
+import asyncio
 
 class SaunaBackend:
     MAX_SAUNA_TEMP = 120
@@ -23,11 +25,15 @@ class SaunaBackend:
         self.house_heating_enabled = False
 
         self.run = True
-        self.temp_update_thread = threading.Thread(target=self.updateTemp)
+        self.temp_update_thread = threading.Thread(target=self.__updateTemp)
         self.temp_update_thread.start()
 
-        self.oven_control_thread = threading.Thread(target=self.ovenControl)
+        self.oven_control_thread = threading.Thread(target=self.__ovenControl)
         self.oven_control_thread.start()
+        
+        self.get_weather_thread = threading.Thread(target=self.__getWeather)
+        self.get_weather_thread.start()
+
 
     def stop(self):
         self.run = False
@@ -83,7 +89,14 @@ class SaunaBackend:
             self.house_heating_enabled = False
             self.__switchHouseOven(False)
 
-    def ovenControl(self):
+    async def __getWeather(self):
+        client = python_weather.Client(format=python_weather.METRIC)
+        while(self.run):
+            weather = await client.find("Washington DC")
+            print("Current weather in DC: " + str(weather.current.temperature))
+            
+
+    def __ovenControl(self):
         while self.run:
             if self.house_heating_enabled:
                 if self.current_house_temp < self.house_temp_setting - 1:
@@ -108,7 +121,7 @@ class SaunaBackend:
             print('switching house oven to ' + str(new_state))
             self.house_oven_on = new_state
 
-    def updateTemp(self):
+    def __updateTemp(self):
         while self.run:
             with self.lock:
                 if self.house_oven_on:
